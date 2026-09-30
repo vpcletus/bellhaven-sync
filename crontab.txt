@@ -1,0 +1,4 @@
+# Preferred for this setup: run on the same machine as the review app so both use the same sync.db.
+# 6:15 AM Eastern daily. flock prevents overlapping runs. Token comes from a root-only env file, not the crontab.
+CRON_TZ=America/New_York
+15 6 * * * cd /opt/bellhaven-sync && . ./.env && flock -n /tmp/bellhaven-sync.lock python3 -m bellhaven_sync.pipeline >> logs/pipeline.log 2>&1

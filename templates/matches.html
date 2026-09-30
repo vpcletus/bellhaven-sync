@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block body %}
+<div class="card">
+<h3 style="margin-top:0">Every website location and how it resolved (run #{{ run.id if run else '-' }})</h3>
+<p class="mute">confirmed = matched with nothing to change. Other labels mean a proposal was generated for that location.</p>
+<table><tr><th>Website location</th><th>Classification</th><th>CRM account</th></tr>
+{% for r in (run.report if run else []) %}
+<tr><td>{{ r.name }}</td><td><span class="pill">{{ r.classification }}</span></td><td>{{ r.account_id or '-' }}</td></tr>
+{% endfor %}</table></div>
+{% endblock %}

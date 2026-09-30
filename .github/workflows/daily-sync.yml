@@ -1,0 +1,52 @@
+# Daily Bellhaven sync. Proposes only - never writes to the CRM (writes happen in the review app on approval).
+#
+# State caveat: re-run safety lives in sync.db (decisions table). A GitHub runner is ephemeral, so the DB is
+# carried between runs with actions/cache (new key each run, restored from the latest prefix match).
+# In production the review app and this job would share one database (e.g. Postgres) instead of SQLite.
+# Even without the DB the CRM itself is a backstop: applied changes stop producing diffs, so only
+# REJECTED items could resurface.
+name: bellhaven-daily-sync
+
+on:
+  schedule:
+    - cron: "15 10 * * *"   # 10:15 UTC = 6:15 AM ET, queue is ready before the team starts
+  workflow_dispatch: {}
+
+concurrency:
+  group: bellhaven-sync
+  cancel-in-progress: false   # never run two syncs at once
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Restore proposal store
+        uses: actions/cache/restore@v4
+        with:
+          path: sync.db
+          key: sync-db-${{ github.run_id }}
+          restore-keys: sync-db-
+      - name: Tests (matcher + SOP rules against the fixture snapshot)
+        run: python -m pytest -q
+      - name: Run pipeline (read-only)
+        env:
+          CRM_TOKEN: ${{ secrets.CRM_TOKEN }}
+        run: python -m bellhaven_sync.pipeline
+      - name: Save proposal store
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: sync.db
+          key: sync-db-${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snapshot-${{ github.run_id }}
+          path: snapshots/
+          retention-days: 30

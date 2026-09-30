@@ -1,0 +1,61 @@
+{% extends "base.html" %}{% block body %}
+{% set ev = pay.evidence %}
+<p><a href="{{ url_for('index') }}">&larr; queue</a></p>
+<div class="card">
+  <div class="row"><span class="pill k-{{ pay.kind }}">{{ labels.get(pay.kind,(pay.kind,''))[0] }}</span><h2 style="margin:4px 0" class="grow">{{ pay.title }}</h2><span class="pill s-{{ p.status }}">{{ p.status }}</span></div>
+  <p><b>Why:</b> {{ pay.rationale }}</p>
+  {% if 'WARNING' in pay.rationale %}<div class="warn">Billing warning in rationale - read before approving.</div>{% endif %}
+</div>
+
+<div class="card"><h3 style="margin-top:0">Changes that will be written on approve</h3>
+{% for a in pay.actions %}
+  {% if a.op == 'create' %}
+    <p><b>{{ loop.index }}. CREATE new account</b></p>
+    <table>{% for k, v in a.fields.items() %}<tr><th style="width:200px">{{ k }}</th><td class="new">{{ v }}</td></tr>{% endfor %}</table>
+  {% else %}
+    <p><b>{{ loop.index }}. PATCH {{ a.account_id if a.account_id != '$new' else '(the new account)' }}</b>
+      {% if a.expect %}<span class="mute"> - only if {{ a.expect|tojson }} is still true</span>{% endif %}</p>
+    <table><tr><th style="width:200px">field</th><th>current</th><th>new</th></tr>
+    {% for k, v in a.fields.items() %}<tr><td>{{ k }}</td><td class="old">{{ (a.before or {}).get(k, '') }}</td>
+      <td class="new">{{ '(id of account created in step 1)' if v == '$new' else v }}</td></tr>{% endfor %}</table>
+  {% endif %}
+{% endfor %}
+{% if pay.kind in ('chow_new_account','sold_to_other_operator') %}<p class="mute">Per SOP the old account is otherwise left exactly as it is (name, parent, status, note unchanged).</p>{% endif %}
+{% if p.status in ('pending','failed') %}
+<form method="post" class="row" style="margin-top:14px">
+  <input type="text" name="reviewer" placeholder="Your name" value="">
+  <input type="text" name="comment" placeholder="Comment (optional)">
+  <button class="btn approve" formaction="{{ url_for('approve', key=p.key) }}">Approve &amp; write to CRM</button>
+  <button class="btn reject" formaction="{{ url_for('reject', key=p.key) }}">Reject</button>
+</form>
+{% endif %}
+{% if p.result %}<p><b>Result:</b></p><pre style="white-space:pre-wrap">{{ p.result|tojson(indent=1) }}</pre>{% endif %}
+{% if p.review_comment %}<p><b>Reviewer note:</b> {{ p.review_comment }} ({{ p.reviewer }}, {{ p.decided_at }})</p>{% endif %}
+</div>
+
+<div class="cols">
+  <div class="card"><h3 style="margin-top:0">Website</h3>
+  {% if ev.website is mapping %}
+    <table>{% for k in ['name','street','city','state','zip','offerings','administrator','phone'] %}<tr><th style="width:120px">{{ k }}</th><td>{{ ev.website[k]|join(', ') if k=='offerings' else ev.website[k] }}</td></tr>{% endfor %}</table>
+    <p><a href="{{ ev.website.url }}" target="_blank">{{ ev.website.url }}</a></p>
+  {% else %}<p>{{ ev.website or '-' }}</p>{% endif %}
+  </div>
+  <div class="card"><h3 style="margin-top:0">CRM record</h3>
+  {% set c = ev.crm %}
+  {% if c %}<table>{% for k in ['account_id','name','parent_name','billing_street','billing_city','billing_state','billing_zip','care_type','status','phone','lifetime_revenue','outstanding_ar','chow_current_account','duplicate_of_account','note'] %}
+    <tr><th style="width:150px">{{ k }}</th><td>{{ c[k] }}</td></tr>{% endfor %}
+    <tr><th>contacts</th><td>{{ c.contacts|join('; ') or '-' }}</td></tr></table>
+  {% else %}<p class="mute">No CRM record (new location).</p>{% endif %}
+  </div>
+</div>
+
+<div class="card"><h3 style="margin-top:0">Evidence</h3><ul>
+{% if ev.match_method %}<li>Matched by: <b>{{ ev.match_method }}</b></li>{% endif %}
+{% if ev.administrator_matches_crm_contact is defined %}<li>Website administrator is a CRM contact on this account: <b>{{ 'yes' if ev.administrator_matches_crm_contact else 'no' }}</b></li>{% endif %}
+{% if ev.phone_mismatch_not_changed %}<li>Phone differs (not changed automatically): CRM {{ ev.phone_mismatch_not_changed.crm }} vs website {{ ev.phone_mismatch_not_changed.website }}</li>{% endif %}
+{% if ev.survivor %}<li>Surviving record: <b>{{ ev.survivor.name }}</b> ({{ ev.survivor.account_id }}, parent {{ ev.survivor.parent_name }}, revenue {{ ev.survivor.lifetime_revenue }}, AR {{ ev.survivor.outstanding_ar }}, contacts: {{ ev.survivor.contacts|join('; ') or 'none' }})</li>{% endif %}
+{% if ev.other_operator_record %}<li>Other operator's record at the same address: <b>{{ ev.other_operator_record.name }}</b> ({{ ev.other_operator_record.account_id }}, parent {{ ev.other_operator_record.parent_name }})</li>{% endif %}
+{% for n in ev.near_misses or [] %}<li>Near miss, NOT linked: {{ n.name }} ({{ n.account_id }}) at {{ n.street }}, parent {{ n.parent }} - {{ n.why_not }}</li>{% endfor %}
+{% for k in ev.children or [] %}<li>Child: {{ k.name }} ({{ k.account_id }}) status {{ k.status }}{% if k.duplicate_of_account %}, duplicate of {{ k.duplicate_of_account }}{% endif %}{% if k.chow_current_account %}, CHOW -> {{ k.chow_current_account }}{% endif %}</li>{% endfor %}
+</ul></div>
+{% endblock %}

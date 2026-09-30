@@ -1,0 +1,22 @@
+{% extends "base.html" %}{% block body %}
+<div class="row" style="margin-bottom:12px">
+  {% for s in ['pending','applied','rejected','failed','stale','superseded','all'] %}
+  <a class="pill {{ 's-'+s }}" href="{{ url_for('index', status=s) }}" style="{{ 'outline:2px solid #2e5d50' if s==status else '' }}">{{ s }} {{ counts.get(s, '') }}</a>
+  {% endfor %}
+  <span class="grow"></span>
+  {% if last_run %}<span class="mute">Last run #{{ last_run.id }} {{ last_run.finished_at or last_run.started_at }} - {{ last_run.status }}
+  {% if last_run.status=='ok' %}({{ last_run.n_locations }} locations, {{ last_run.n_accounts }} accounts, {{ last_run.n_new }} new, {{ last_run.n_skipped_decided }} already decided){% else %}{{ last_run.error }}{% endif %}</span>{% endif %}
+</div>
+{% if not rows %}<div class="card mute">Nothing here.</div>{% endif %}
+{% for r in rows %}
+<div class="card row">
+  <span class="pill k-{{ r.kind }}" title="{{ labels.get(r.kind, ('',''))[1] }}">{{ labels.get(r.kind, (r.kind,''))[0] }}</span>
+  <a class="grow" href="{{ url_for('detail', key=r.key) }}"><b>{{ r.title }}</b></a>
+  <span class="pill s-{{ r.status }}">{{ r.status }}</span>
+  {% if r.status in ('pending','failed') %}
+  <form method="post" action="{{ url_for('reject', key=r.key) }}"><input type="hidden" name="back" value="{{ status }}"><button class="btn reject">Reject</button></form>
+  <a class="btn approve" style="text-decoration:none" href="{{ url_for('detail', key=r.key) }}">Review &rarr;</a>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

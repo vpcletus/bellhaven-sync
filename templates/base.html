@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bellhaven Sync Review</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#23231f;--mute:#6f6c62;--line:#e3e0d6;--green:#2e5d50;--red:#a33a2c;--amber:#9a6b00;--blue:#285a8c}
+*{box-sizing:border-box}body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--green);color:#fff;padding:12px 24px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+header a{color:#fff;text-decoration:none;opacity:.9}header b{font-size:16px}
+main{max-width:1200px;margin:0 auto;padding:20px 24px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin-bottom:10px}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#ece8dc;color:#5b5440;margin-right:6px}
+.k-chow_new_account{background:#fbe3dc;color:var(--red)}.k-reparent{background:#fff1cc;color:var(--amber)}
+.k-create_account{background:#dcebf8;color:var(--blue)}.k-mark_duplicate{background:#eee;color:#555}
+.s-applied{background:#d9efe3;color:var(--green)}.s-rejected{background:#f1d9d5;color:var(--red)}.s-failed,.s-stale{background:#fde7c4;color:var(--amber)}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--mute);font-weight:600}
+.old{color:var(--red);text-decoration:line-through}.new{color:var(--green);font-weight:600}
+.flash{padding:10px 14px;border-radius:4px;margin-bottom:12px}.flash.ok{background:#d9efe3}.flash.err{background:#f6d7d2}
+.btn{border:0;border-radius:4px;padding:8px 16px;font-size:14px;cursor:pointer}.approve{background:var(--green);color:#fff}.reject{background:#e7e3d8}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.grow{flex:1}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:800px){.cols{grid-template-columns:1fr}}
+.mute{color:var(--mute)}a{color:var(--blue)}input[type=text]{padding:7px;border:1px solid var(--line);border-radius:4px;width:260px}
+.warn{background:#fff6e0;border-left:4px solid var(--amber);padding:8px 12px;margin:8px 0}
+</style></head><body>
+<header><b>Bellhaven Sync</b><a href="{{ url_for('index') }}">Review queue</a><a href="{{ url_for('matches') }}">Location matches</a>
+<form method="post" action="{{ url_for('run_now') }}" style="margin-left:auto"><button class="btn reject" title="Scrape site + snapshot CRM + queue proposals (read-only)">Run pipeline now</button></form></header>
+<main>
+{% with msgs = get_flashed_messages(with_categories=true) %}{% for cat, m in msgs %}<div class="flash {{cat}}">{{ m }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</main></body></html>
