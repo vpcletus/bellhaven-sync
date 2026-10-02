@@ -20,6 +20,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      CRM_TOKEN: ${{ secrets.CRM_TOKEN }}   # empty when the secret isn't configured
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,11 +37,10 @@ jobs:
       - name: Tests (matcher + SOP rules against the fixture snapshot)
         run: python -m pytest -q
       - name: Run pipeline (read-only)
-        env:
-          CRM_TOKEN: ${{ secrets.CRM_TOKEN }}
+        if: env.CRM_TOKEN != ''   # no secret configured -> tests still run, pipeline is skipped
         run: python -m bellhaven_sync.pipeline
       - name: Save proposal store
-        if: always()
+        if: always() && hashFiles('sync.db') != ''
         uses: actions/cache/save@v4
         with:
           path: sync.db
